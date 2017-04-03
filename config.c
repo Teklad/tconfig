@@ -25,13 +25,7 @@ typedef struct TConfig {
     int allocated_len;
 } TConfig;
 
-/**
- * @brief Creates a section if it doesn't exist and returns the index.
- *        Just returns the index if the section already exists.
- * @param TConfig t
- * @param const char* section_name
- * @return int index
- */
+
 int tconfig_create_section(TConfig* t, const char* section_name)
 {
     for (int i = 0; i < t->sections_len; i++) {
@@ -55,15 +49,7 @@ int tconfig_create_section(TConfig* t, const char* section_name)
     return t->sections_len-1;
 }
 
-/**
- * @brief Creates a property under the given section, creating the section
- *        if it doesn't exist.  Returns the index to the property.
- * @param TConfig* t
- * @param const char* section_name
- * @param const char* key
- * @param const char* value
- * @return int index
- */
+
 int tconfig_create_property(TConfig* t, const char* section_name,
         const char* key, const char* value)
 {
