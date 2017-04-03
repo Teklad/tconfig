@@ -14,7 +14,7 @@ int main(void)
     if (conf == NULL) {
         return -1;
     }
-    printf("%s\n", tconfig_get_property_raw(conf, "Section", "Lemons");
+    printf("%s\n", tconfig_get_property_raw(conf, "Section", "Lemons"));
     tconfig_close(conf);
     return 0;
 }
