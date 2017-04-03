@@ -50,5 +50,7 @@ int main(void)
 You don't need to check for NULL on tconfig_init(), since it just initializes an
 empty struct.  The memory more or less manages itself so long as you call tconfig_close() when you're finished, with the exception of tconfig_get_property_as_char_array(), which returns a modifiable version of the value.  You'll need to call free() if you use that function.
 
+There's currently no support for saving comment lines, but I may bother to add it in the future if I get bored.
+
 For more information on these functions, check out config.h, which I spent a bit of time documenting for easy reading.
 
