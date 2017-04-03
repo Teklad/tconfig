@@ -83,7 +83,7 @@ int tconfig_create_property(TConfig* t, const char* section_name,
     return index;
 }
 
-void tconfig_skip_comment(FILE* f)
+void tconfig_skip_to_end(FILE* f)
 {
     fscanf(f, "%*[^\n]\n", NULL);   
 }
@@ -102,7 +102,6 @@ bool tconfig_read_section(TConfig* t, FILE* f)
     memset(buf, '\0', bufsize);
     int count = 0;
     int spaces = 0;
-    int index = 0;
     int c;
     do {
         c = getc(f);
@@ -110,12 +109,13 @@ bool tconfig_read_section(TConfig* t, FILE* f)
             case ' ':
                 if(buf[0] != '\0') spaces++;
                 continue;
-            case ']':
-                index = tconfig_create_section(t, buf);
+            case ']': {
+                int index = tconfig_create_section(t, buf);
                 tc_current_section = t->sections[index].name;
                 free(buf);
                 return true;
                 break;
+                      }
             case '\r':
             case '\n':
                 printf("Missing ] near %s\n", buf);
@@ -123,10 +123,9 @@ bool tconfig_read_section(TConfig* t, FILE* f)
                 tconfig_close(t);
                 return false;
             default:
-                while (spaces > 0) {
+                for(;spaces > 0; spaces--) {
                     buf[count++] = ' ';
                     tconfig_realloc_if_required(buf, &bufsize, count);
-                    spaces--;
                 }
                 buf[count++] = c;
                 tconfig_realloc_if_required(buf, &bufsize, count);
@@ -143,11 +142,10 @@ bool tconfig_read_property(TConfig* t, FILE* f, int first_char)
 {
     int bufsize = TC_INITIAL_BUFFERSIZE;
     char* buf = malloc(bufsize * sizeof(char));
+    char* key = NULL;
     memset(buf, '\0', bufsize);
     int count = 0;
     int spaces = 0;
-    char key[2048];
-    memset(key, '\0', sizeof(key));
     if (first_char != ' ') buf[count++] = first_char;
     int c;
     do {
@@ -155,24 +153,16 @@ bool tconfig_read_property(TConfig* t, FILE* f, int first_char)
         switch(c) {
             case ' ':
                 if(buf[0] != '\0') spaces++;
-                break;
-            case EOF:
+                continue;
+            case ';':
+                tconfig_skip_to_end(f);
             case '\n':
             case '\r':
-            case ';':
-                if (!strlen(key)) {
-                    printf("Missing `=' operator near %s\n", buf);
-                    free(buf);
-                    tconfig_close(t);
-                    return false;
-                }
-
-                tconfig_create_property(t, tc_current_section, key, buf);
-                free(buf);
-                tconfig_skip_comment(f);
-                return true;
+                c = EOF;
+                continue;
             case '=':
-                if (!strlen(key)) {
+                if (key == NULL) {
+                    key = malloc((strlen(buf)+1)*sizeof(char));
                     strcpy(key, buf);
                     memset(buf, '\0', bufsize);
                     count = 0;
@@ -180,31 +170,25 @@ bool tconfig_read_property(TConfig* t, FILE* f, int first_char)
                     break;
                 }
             default:
-                while (spaces > 0) {
+                for (;spaces > 0; spaces--) {
                     buf[count++] = ' ';
                     tconfig_realloc_if_required(buf, &bufsize, count);
-                    spaces--;
                 }
                 buf[count++] = c;
                 tconfig_realloc_if_required(buf, &bufsize, count);
                 break;
         }
     }while (c != EOF);
-
-    if (strlen(key)) {
+    if (key != NULL) {
         tconfig_create_property(t, tc_current_section, key, buf);
         free(buf);
+        free(key);
         return true;
     }
     printf("Missing `=' operator near %s\n", buf);
     free(buf);
     tconfig_close(t);
     return false;
-}
-
-bool tconfig_is_eol(int c)
-{
-    return (c == '\n' || c == '\r' || c == EOF || c == ';');
 }
 
 TConfig* tconfig_init()
@@ -233,9 +217,8 @@ TConfig* tconfig_open(const char* filepath)
             case '\r':
             case ' ':
                 continue;
-                break;
             case ';':
-                tconfig_skip_comment(f); 
+                tconfig_skip_to_end(f); 
                 break;
             case '[':
                 if(!tconfig_read_section(t, f)) {
