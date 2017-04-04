@@ -19,10 +19,11 @@ void ini_table_destroy(ini_table_s* table);
 /**
  * @brief Creates an ini_table_s struct filled with data from the specified
  *        `file'.  Returns NULL if the file can not be read.
+ * @param table
  * @param file
  * @return ini_table_s*
  */
-ini_table_s* ini_read(const char* file);
+bool ini_table_read_from_file(ini_table_s* table, const char* file);
 
 /**
  * @brief Writes the specified ini_table_s struct to the specified `file'.
@@ -32,7 +33,7 @@ ini_table_s* ini_read(const char* file);
  * @param file
  * @return bool
  */
-bool ini_write(ini_table_s* table, const char* file);
+bool ini_table_write_to_file(ini_table_s* table, const char* file);
 
 /**
  * @brief Creates a new entry in the `table' containing the `key' and `value'
@@ -43,7 +44,7 @@ bool ini_write(ini_table_s* table, const char* file);
  * @param key
  * @param value
  */
-void ini_entry_create(ini_table_s* table, const char* section_name,
+void ini_table_create_entry(ini_table_s* table, const char* section_name,
         const char* key, const char* value);
 
 /**
@@ -54,7 +55,7 @@ void ini_entry_create(ini_table_s* table, const char* section_name,
  * @param key
  * @return bool
  */
-bool ini_entry_exists(ini_table_s* table, const char* section_name,
+bool ini_table_check_entry(ini_table_s* table, const char* section_name,
     const char* key);
 
 /**
@@ -66,7 +67,7 @@ bool ini_entry_exists(ini_table_s* table, const char* section_name,
  * @param key
  * @return const char*
  */
-const char* ini_entry_get_value(ini_table_s* table, const char* section_name,
+const char* ini_table_get_entry(ini_table_s* table, const char* section_name,
         const char* key);
 
 /**
@@ -78,7 +79,7 @@ const char* ini_entry_get_value(ini_table_s* table, const char* section_name,
  * @param [out]value
  * @return int
  */
-bool ini_entry_get_value_as_int(ini_table_s* table, const char* section_name,
+bool ini_table_get_entry_as_int(ini_table_s* table, const char* section_name,
     const char* key, int* value);
 
 /**
@@ -90,7 +91,7 @@ bool ini_entry_get_value_as_int(ini_table_s* table, const char* section_name,
  * @param [out]value
  * @return bool
  */
-bool ini_entry_get_value_as_bool(ini_table_s* table, const char* section_name,
+bool ini_table_get_entry_as_bool(ini_table_s* table, const char* section_name,
     const char* key, bool* value);
 
 #endif//_TCONFIG_H_

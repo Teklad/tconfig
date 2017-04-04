@@ -8,44 +8,18 @@ the ';' character.
 
 A basic usage example would be something like this:
 ```c
-#include "config.h"
-int main(void)
 {
-    ini_table_s* conf = ini_read("test.ini");
-    if (conf == NULL) {
-        return -1;
+int main()
+{
+    ini_table_s* config = ini_table_create();
+    if (!ini_table_read_from_file(config, "test.ini")) {
+        puts("test.ini does not exist! Adding entries!");
+        ini_table_create_entry(config, "Section", "one", "two");
+        ini_table_write_to_file(config, "test.ini");
+    }else {
+        puts("Entry one is: %s\n", ini_table_get_entry(config, "Section", "one"));
     }
-    const char* tasty = ini_entry_get_value(conf, "section", "key");
-    printf("%s == winner\n", tasty);
-    ini_table_destroy(conf);
-    return 0;
-}
-```
-
-If you want to create/modify an entry:
-```c
-#include "config.h"
-int main(void)
-{
-    ini_table_s* conf = ini_read("test.ini");
-    if (conf == NULL) {
-        return -1;
-    }
-    ini_entry_create(conf, "Section", "Lemons", "are great");
-    ini_write(conf, "test.ini");
-    ini_table_destroy(conf);
-    return 0;
-}
-```
-
-If there's not currently an INI file, you can use:
-```c
-int main(void)
-{
-    ini_table_s* conf = ini_table_create();
-    ini_entry_create(conf, "Section", "Lemons", "are great");
-    ini_write(conf, "test.ini");
-    ini_table_destroy(conf);
+    ini_table_destroy(config);
     return 0;
 }
 ```

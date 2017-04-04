@@ -116,10 +116,10 @@ void ini_table_destroy(ini_table_s* table)
     free(table);
 }
 
-ini_table_s* ini_read(const char* file)
+bool ini_table_read_from_file(ini_table_s* table, const char* file)
 {
     FILE* f = fopen(file, "r");
-    if (f == NULL) return NULL;
+    if (f == NULL) return false;
 
     enum {Section, Key, Value} state;
     int   c;
@@ -130,7 +130,6 @@ ini_table_s* ini_read(const char* file)
     char* buf   = malloc(buffer_size);
     char* value = NULL;
 
-    ini_table_s*   table = ini_table_create();
     ini_section_s* current_section = NULL;
 
     memset(buf, '\0', buffer_size);
@@ -194,10 +193,10 @@ ini_table_s* ini_read(const char* file)
     }
     free(buf);
     fclose(f);
-    return table;
+    return true;
 }
 
-bool ini_write(ini_table_s* table, const char* file)
+bool ini_table_write_to_file(ini_table_s* table, const char* file)
 {
     FILE* f = fopen(file, "w+");
     if (f == NULL) return false;
@@ -214,7 +213,7 @@ bool ini_write(ini_table_s* table, const char* file)
 }
 
 
-void ini_entry_create(ini_table_s* table, const char* section_name,
+void ini_table_create_entry(ini_table_s* table, const char* section_name,
         const char* key, const char* value)
 {
     ini_section_s* section = _ini_section_find(table, section_name);
@@ -231,13 +230,13 @@ void ini_entry_create(ini_table_s* table, const char* section_name,
     }
 }
 
-bool ini_entry_exists(ini_table_s* table, const char* section_name,
+bool ini_table_check_entry(ini_table_s* table, const char* section_name,
         const char* key)
 {
     return (_ini_entry_get(table, section_name, key) != NULL);
 }
 
-const char* ini_entry_get_value(ini_table_s* table, const char* section_name,
+const char* ini_table_get_entry(ini_table_s* table, const char* section_name,
         const char* key)
 {
     ini_entry_s* entry = _ini_entry_get(table, section_name, key);
@@ -247,10 +246,10 @@ const char* ini_entry_get_value(ini_table_s* table, const char* section_name,
     return entry->value;
 }
 
-bool ini_entry_get_value_as_int(ini_table_s* table, const char* section_name,
+bool ini_table_get_entry_as_int(ini_table_s* table, const char* section_name,
         const char* key, int* value)
 {
-    const char* val = ini_entry_get_value(table, section_name, key);
+    const char* val = ini_table_get_entry(table, section_name, key);
     if (val == NULL) {
         return false;
     }
@@ -258,10 +257,10 @@ bool ini_entry_get_value_as_int(ini_table_s* table, const char* section_name,
     return true;
 }
 
-bool ini_entry_get_value_as_bool(ini_table_s* table, const char* section_name,
+bool ini_table_get_entry_as_bool(ini_table_s* table, const char* section_name,
         const char* key, bool* value)
 {
-    const char* val = ini_entry_get_value(table, section_name, key);
+    const char* val = ini_table_get_entry(table, section_name, key);
     if (val == NULL) {
         return false;
     }
