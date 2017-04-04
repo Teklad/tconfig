@@ -8,29 +8,32 @@ the ';' character.
 
 A basic usage example would be something like this:
 ```c
+#include "config.h"
 int main(void)
 {
-    TConfig* conf = tconfig_open("test.ini");
+    ini_table_s* conf = ini_read("test.ini");
     if (conf == NULL) {
         return -1;
     }
-    printf("%s\n", tconfig_get_property_raw(conf, "Section", "Lemons"));
-    tconfig_close(conf);
+    const char* tasty = ini_entry_get_value(conf, "section", "key");
+    printf("%s == winner\n", tasty);
+    ini_table_destroy(conf);
     return 0;
 }
 ```
 
-If you want to modify an existing property:
+If you want to create/modify an entry:
 ```c
+#include "config.h"
 int main(void)
 {
-    TConfig* conf = tconfig_open("test.ini");
+    ini_table_s* conf = ini_read("test.ini");
     if (conf == NULL) {
         return -1;
     }
-    tconfig_create_property(conf, "Section", "Lemons", "are great");
-    tconfig_write(conf, "test.ini");
-    tconfig_close(conf);
+    ini_entry_create(conf, "Section", "Lemons", "are great");
+    ini_write(conf, "test.ini");
+    ini_table_destroy(conf);
     return 0;
 }
 ```
@@ -39,16 +42,17 @@ If there's not currently an INI file, you can use:
 ```c
 int main(void)
 {
-    TConfig* conf = tconfig_init();
-    tconfig_create_property(conf, "Section", "Lemons", "are great");
-    tconfig_write(conf, "test.ini");
-    tconfig_close(conf);
+    ini_table_s* conf = ini_table_create();
+    ini_entry_create(conf, "Section", "Lemons", "are great");
+    ini_write(conf, "test.ini");
+    ini_table_destroy(conf);
     return 0;
 }
 ```
 
-You don't need to check for NULL on tconfig_init(), since it just initializes an
-empty struct.  The memory more or less manages itself so long as you call tconfig_close() when you're finished, with the exception of tconfig_get_property_as_char_array(), which returns a modifiable version of the value.  You'll need to call free() if you use that function.
+You don't need to check for NULL on ini_table_create(), since it creates an empty
+structure.  Always make sure to call ini_table_destroy() when you're finished
+using the data, however.
 
 There's currently no support for saving comment lines, but I may bother to add it in the future if I get bored.
 
