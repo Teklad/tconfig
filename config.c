@@ -1,315 +1,275 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "config.h"
 
-#define TC_INITIAL_ARRAYSIZE 10
-#define TC_INCREMENT_SIZE 10
-#define TC_INITIAL_BUFFERSIZE 100
-#define TC_BUFFER_INCREMENT_SIZE 100
+typedef struct ini_entry_s {
+    char* key;
+    char* value;
+} ini_entry_s;
 
-char* tc_current_section = NULL;
+typedef struct ini_section_s {
+    char* name;
+    ini_entry_s* entry;
+    int size;
+} ini_section_s;
 
-typedef struct TConfigSection {
-    char*  name;
-    char** keys;
-    char** values;
-    int properties_len;
-    int allocated_len;
-} TConfigSection;
+typedef struct ini_table_s {
+    ini_section_s* section;
+    int size;
+} ini_table_s;
 
-typedef struct TConfig {
-    struct TConfigSection* sections;
-    int sections_len;
-    int allocated_len;
-} TConfig;
-
-
-int tconfig_create_section(TConfig* t, const char* section_name)
+void print_log(int line, const char* msg, const char* extra)
 {
-    for (int i = 0; i < t->sections_len; i++) {
-        if (strcmp(t->sections[i].name, section_name) == 0) {
-            return i;
-        }
-    }
-    if (t->sections_len + 1 > t->allocated_len) {
-        t->allocated_len += TC_INCREMENT_SIZE;
-        t->sections = realloc(t->sections, 
-                sizeof(TConfigSection)*t->allocated_len);
-    }
-    TConfigSection* section = &t->sections[t->sections_len];
-    section->name = malloc((strlen(section_name)+1) * sizeof(char));
-    strcpy(section->name, section_name);
-    section->keys = malloc(TC_INITIAL_ARRAYSIZE * sizeof(char*));
-    section->values = malloc(TC_INITIAL_ARRAYSIZE * sizeof(char*));
-    section->properties_len = 0;
-    section->allocated_len = TC_INITIAL_ARRAYSIZE;
-    t->sections_len++;
-    return t->sections_len-1;
+    printf("TConfig [Line: %i]: ", line);
+    printf(msg, extra);
+    printf("\n");
 }
 
-
-int tconfig_create_property(TConfig* t, const char* section_name,
+ini_entry_s* _ini_entry_create(ini_section_s* section, 
         const char* key, const char* value)
 {
-    int index = tconfig_create_section(t, section_name);
-    TConfigSection* section = &t->sections[index];
-    index = -1;
-    for (int i = 0; i < section->properties_len; i++) {
-        if (strcmp(section->keys[i], key) == 0) {
-            index = i;
-            break;
+    if ((section->size % 10) == 0) {
+        section->entry = 
+            realloc(section->entry, (10+section->size) * sizeof(ini_entry_s));
+    }
+    ini_entry_s* entry = &section->entry[section->size++];
+    entry->key = malloc((strlen(key)+1)*sizeof(char));
+    entry->value = malloc((strlen(value)+1)*sizeof(char));
+    strcpy(entry->key, key);
+    strcpy(entry->value, value);
+    return entry;
+}
+
+ini_section_s* _ini_section_create(ini_table_s* table, const char* section_name)
+{
+    if ((table->size % 10) == 0) {
+        table->section = 
+            realloc(table->section, (10+table->size) * sizeof(ini_section_s));
+    }
+    ini_section_s* section = &table->section[table->size++];
+    section->size = 0;
+    section->name = malloc((strlen(section_name)+1) * sizeof(char));
+    strcpy(section->name, section_name);
+    section->entry = malloc(10 * sizeof(ini_entry_s));
+    return section;
+}
+
+ini_section_s* _ini_section_find(ini_table_s* table, const char* name)
+{
+    for (int i = 0; i < table->size; i++) {
+        if (strcmp(table->section[i].name, name) == 0) {
+            return &table->section[i];
         }
     }
-    if (index < 0) {
-        if (section->properties_len+1 > section->allocated_len) {
-            section->allocated_len += TC_INCREMENT_SIZE;
-            section->keys = realloc(section->keys, 
-                    section->allocated_len * sizeof(char*));
-            section->values = realloc(section->values,
-                    section->allocated_len * sizeof(char*));
+    return NULL;
+}
+
+ini_entry_s* _ini_entry_find(ini_section_s* section, const char* key)
+{
+    for (int i = 0; i < section->size; i++) {
+        if (strcmp(section->entry[i].key, key) == 0) {
+            return &section->entry[i];
         }
-        index = section->properties_len++;
-        section->keys[index] = malloc((strlen(key)+1) * sizeof(char));
-        section->values[index] = malloc((strlen(value)+1) * sizeof(char));
-        strcpy(section->keys[index], key);
-        strcpy(section->values[index], value);
-    }else {
-        free(section->values[index]);
-        section->values[index] = malloc((strlen(value)+1) * sizeof(char));
-        strcpy(section->values[index], value);
     }
-    return index;
+    return NULL;
 }
 
-void tconfig_skip_to_end(FILE* f)
+ini_entry_s* _ini_entry_get(ini_table_s* table, const char* section_name,
+        const char* key)
 {
-    fscanf(f, "%*[^\n]\n", NULL);   
-}
-
-void tconfig_realloc_if_required(char* buf, int* bufsize, int count)
-{
-    if (count >= *bufsize) {
-        buf = realloc(buf, (*bufsize + TC_BUFFER_INCREMENT_SIZE) * sizeof(char));
-    }
-}
-
-bool tconfig_read_section(TConfig* t, FILE* f)
-{
-    int bufsize = TC_INITIAL_BUFFERSIZE;
-    char* buf = malloc(bufsize * sizeof(char));
-    memset(buf, '\0', bufsize);
-    int count = 0;
-    int spaces = 0;
-    int c;
-    do {
-        c = getc(f);
-        switch(c) {
-            case ' ':
-                if(buf[0] != '\0') spaces++;
-                continue;
-            case ']': {
-                int index = tconfig_create_section(t, buf);
-                tc_current_section = t->sections[index].name;
-                free(buf);
-                return true;
-                break;
-                      }
-            case '\r':
-            case '\n':
-                printf("Missing ] near %s\n", buf);
-                free(buf);
-                tconfig_close(t);
-                return false;
-            default:
-                for(;spaces > 0; spaces--) {
-                    buf[count++] = ' ';
-                    tconfig_realloc_if_required(buf, &bufsize, count);
-                }
-                buf[count++] = c;
-                tconfig_realloc_if_required(buf, &bufsize, count);
-                break;
-        }
-    }while (c != EOF);
-    printf ("Reached end of file\n");
-    free(buf);
-    tconfig_close(t);
-    return false;
-}
-
-bool tconfig_read_property(TConfig* t, FILE* f, int first_char)
-{
-    int bufsize = TC_INITIAL_BUFFERSIZE;
-    char* buf = malloc(bufsize * sizeof(char));
-    char* key = NULL;
-    memset(buf, '\0', bufsize);
-    int count = 0;
-    int spaces = 0;
-    if (first_char != ' ') buf[count++] = first_char;
-    int c;
-    do {
-        c = getc(f);
-        switch(c) {
-            case ' ':
-                if(buf[0] != '\0') spaces++;
-                continue;
-            case ';':
-                tconfig_skip_to_end(f);
-            case '\n':
-            case '\r':
-                c = EOF;
-                continue;
-            case '=':
-                if (key == NULL) {
-                    key = malloc((strlen(buf)+1)*sizeof(char));
-                    strcpy(key, buf);
-                    memset(buf, '\0', bufsize);
-                    count = 0;
-                    spaces = 0;
-                    break;
-                }
-            default:
-                for (;spaces > 0; spaces--) {
-                    buf[count++] = ' ';
-                    tconfig_realloc_if_required(buf, &bufsize, count);
-                }
-                buf[count++] = c;
-                tconfig_realloc_if_required(buf, &bufsize, count);
-                break;
-        }
-    }while (c != EOF);
-    if (key != NULL) {
-        tconfig_create_property(t, tc_current_section, key, buf);
-        free(buf);
-        free(key);
-        return true;
-    }
-    printf("Missing `=' operator near %s\n", buf);
-    free(buf);
-    tconfig_close(t);
-    return false;
-}
-
-TConfig* tconfig_init()
-{
-    TConfig* t = malloc(sizeof(TConfig));
-    t->sections = malloc(TC_INITIAL_ARRAYSIZE*sizeof(TConfigSection));
-    t->sections_len = 0;
-    t->allocated_len = TC_INITIAL_ARRAYSIZE;
-    return t;
-}
-
-TConfig* tconfig_open(const char* filepath)
-{
-    TConfig* t = tconfig_init();
-    FILE* f;
-    int c;
-    f = fopen(filepath, "r");
-    if (f == NULL) {
+    ini_section_s* section = _ini_section_find(table, section_name);
+    if (section == NULL) {
         return NULL;
     }
-    do {
-        c = getc(f);
-        switch(c) {
-            case EOF:
-            case '\n':
-            case '\r':
-            case ' ':
-                continue;
-            case ';':
-                tconfig_skip_to_end(f); 
-                break;
-            case '[':
-                if(!tconfig_read_section(t, f)) {
-                    fclose(f);
-                    return NULL;
-                }
-                break;
-            default:
-                if(!tconfig_read_property(t, f, c)) {
-                    fclose(f);
-                    return NULL;
-                }
-                break;
-        }
-    }while (c != EOF);
-    fclose(f);
-    return t;
+    
+    ini_entry_s* entry = _ini_entry_find(section, key);
+    if (entry == NULL) {
+        return NULL;
+    }
+    return entry;
 }
 
-void tconfig_close(TConfig* t)
+ini_table_s* ini_table_create()
 {
-    if (t == NULL) return;
-    for (int i = 0; i < t->sections_len; i++) {
-        TConfigSection* section = &t->sections[i];
-        for (int q = 0; q < section->properties_len; q++) {
-            free(section->keys[q]);
-            free(section->values[q]);
+    ini_table_s* table = malloc(sizeof(ini_table_s));
+    table->size = 0;
+    table->section = malloc(10 * sizeof(ini_section_s));
+    return table;
+}
+
+void ini_table_destroy(ini_table_s* table)
+{
+    for (int i = 0; i < table->size; i++) {
+        ini_section_s* section = &table->section[i];
+        for (int q = 0; q < section->size; q++) {
+            ini_entry_s* entry = &section->entry[q];
+            free(entry->key);
+            free(entry->value);
         }
-        free(section->keys);
-        free(section->values);
+        free(section->entry);
         free(section->name);
     }
-    free(t->sections);
-    free(t);
+    free(table->section);
+    free(table);
 }
 
-bool tconfig_write(TConfig* t, const char* filename)
+ini_table_s* ini_read(const char* file)
 {
-    FILE* f = fopen(filename, "w+");
+    FILE* f = fopen(file, "r");
+    if (f == NULL) return NULL;
+
+    enum {Section, Key, Value} state;
+    int   c;
+    int   position = 0;
+    int   spaces   = 0;
+    int   line     = 0;
+    int   buffer_size = 128 * sizeof(char);
+    char* buf   = malloc(buffer_size);
+    char* value = NULL;
+
+    ini_table_s*   table = ini_table_create();
+    ini_section_s* current_section = NULL;
+
+    memset(buf, '\0', buffer_size);
+    while((c = getc(f)) != EOF) {
+        if (position > buffer_size-2) {
+            buffer_size += 128 * sizeof(char);
+            buf = realloc(buf, buffer_size);
+        }
+        switch(c) {
+            case ' ':
+                switch(state) {
+                    case Value: if (value[0] != '\0') spaces++; break;
+                    default: if (buf[0] != '\0') spaces++; break;
+                }
+                break;
+            case ';':
+                do {
+                    c = getc(f);
+                }while(c != EOF && c != '\n');
+            case '\n':
+            case EOF:
+                line++;
+                if (state == Value) {
+                    if (current_section == NULL) {
+                        current_section = _ini_section_create(table, "");
+                    }
+                    _ini_entry_create(current_section, buf, value);
+                }else if(state == Section) {
+                    print_log(line, "Section `%s' missing `]' operator.", buf);
+                }else if(state == Key && position) {
+                    print_log(line, "Key `%s' missing `=' operator.", buf);
+                }
+                memset(buf, '\0', buffer_size);
+                state = Key;
+                position = 0;
+                spaces = 0;
+                break;
+            case '[':
+                state = Section;
+                break;
+            case ']':
+                current_section = _ini_section_create(table, buf);
+                memset(buf, '\0', buffer_size);
+                position = 0;
+                spaces = 0;
+                state = Key;
+                break;
+            case '=':
+                if (state == Key) {
+                    state = Value;
+                    buf[position++] = '\0';
+                    value = buf + position;
+                    spaces = 0;
+                    continue;
+                }
+            default:
+                for(;spaces > 0; spaces--) buf[position++] = ' ';
+                buf[position++] = c;
+                break;
+        }
+    }
+    free(buf);
+    fclose(f);
+    return table;
+}
+
+bool ini_write(ini_table_s* table, const char* file)
+{
+    FILE* f = fopen(file, "w+");
     if (f == NULL) return false;
-    for (int i = 0; i < t->sections_len; i++) {
-        TConfigSection* section = &t->sections[i];
-        fprintf(f, "\n[%s]\n", section->name);
-        for (int q = 0; q < section->properties_len; q++) {
-            fprintf(f, "%s = %s\n", section->keys[q], section->values[q]);
+    for (int i = 0; i < table->size; i++) {
+        ini_section_s* section = &table->section[i];
+        fprintf(f, i > 0 ? "\n[%s]\n" : "[%s]\n", section->name);
+        for (int q = 0; q < section->size; q++) {
+            ini_entry_s* entry = &section->entry[q];
+            fprintf(f, "%s = %s\n", entry->key, entry->value);
         }
     }
     fclose(f);
     return true;
 }
 
-const char* tconfig_get_property_raw(TConfig* t, const char* section_name,
-        const char* key)
-{
-    for (int i = 0; i < t->sections_len; i++) {
-        TConfigSection* section = &t->sections[i];
-        if(strcmp(section->name, section_name) == 0) {
-            for (int q = 0; q < section->properties_len; q++) {
-                if (strcmp(section->keys[q], key) == 0) {
-                    return section->values[q];
-                }
-            }
-        }
-    }
-    return NULL;
-}
 
-int tconfig_get_property_as_int(TConfig* t, const char* section_name,
-        const char* key)
+void ini_entry_create(ini_table_s* table, const char* section_name,
+        const char* key, const char* value)
 {
-    const char* tmp = tconfig_get_property_raw(t, section_name, key);
-    if (tmp != NULL) {
-        return atoi(tmp);
+    ini_section_s* section = _ini_section_find(table, section_name);
+    if (section == NULL) {
+        section = _ini_section_create(table, section_name);
     }
-    return 0;
-}
-
-char* tconfig_get_property_as_char_array(TConfig* t, const char* section_name,
-        const char* key)
-{
-    const char* tmp = tconfig_get_property_raw(t, section_name, key);
-    char* mod = malloc((strlen(tmp)+1)*sizeof(char));
-    if (tmp[0] == '"') {
-        strcpy(mod, tmp+1);
+    ini_entry_s* entry = _ini_entry_find(section, key);
+    if (entry == NULL) {
+        entry = _ini_entry_create(section, key, value);
     }else {
-        strcpy(mod, tmp);
+        free(entry->value);
+        entry->value = malloc((strlen(value)+1) * sizeof(char));
+        strcpy(entry->value, value);
     }
-    int last = strlen(mod)-1;
-    if (mod[last] == '"') {
-        mod[last] = '\0';
+}
+
+bool ini_entry_exists(ini_table_s* table, const char* section_name,
+        const char* key)
+{
+    return (_ini_entry_get(table, section_name, key) != NULL);
+}
+
+const char* ini_entry_get_value(ini_table_s* table, const char* section_name,
+        const char* key)
+{
+    ini_entry_s* entry = _ini_entry_get(table, section_name, key);
+    if (entry == NULL) {
+        return NULL;
     }
-    return mod;
+    return entry->value;
+}
+
+bool ini_entry_get_value_as_int(ini_table_s* table, const char* section_name,
+        const char* key, int* value)
+{
+    const char* val = ini_entry_get_value(table, section_name, key);
+    if (val == NULL) {
+        return false;
+    }
+    *value = atoi(val);
+    return true;
+}
+
+bool ini_entry_get_value_as_bool(ini_table_s* table, const char* section_name,
+        const char* key, bool* value)
+{
+    const char* val = ini_entry_get_value(table, section_name, key);
+    if (val == NULL) {
+        return false;
+    }
+    if (strcasecmp(val, "on") == 0 || strcasecmp(val, "true") == 0) {
+        *value = true;
+    }else {
+        *value = false;
+    }
+    return true;
 }
 

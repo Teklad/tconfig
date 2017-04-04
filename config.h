@@ -2,90 +2,95 @@
 #define _TCONFIG_H_
 #include <stdbool.h>
 
-typedef struct TConfig TConfig;
+typedef struct ini_table_s ini_table_s;
 
 /**
- * @brief Initialized an empty TConfig struct pointer.  This is good for writing
- *        to a file that doesn't currently exist.
- * @return TConfig*
+ * @brief Creates an empty ini_table_s struct for writing new entries to.
+ * @return ini_table_s*
  */
-TConfig* tconfig_init();
+ini_table_s* ini_table_create();
+
 /**
- * @brief Reads the specified INI file and returns a TConfig struct pointer
- *        on success, or NULL on failure.
+ * @brief Free up all the allocated resources in the ini_table_s struct.
+ * @param table
+ */
+void ini_table_destroy(ini_table_s* table);
+
+/**
+ * @brief Creates an ini_table_s struct filled with data from the specified
+ *        `file'.  Returns NULL if the file can not be read.
  * @param file
- * @return TConfig*
+ * @return ini_table_s*
  */
-TConfig* tconfig_open(const char* file);
+ini_table_s* ini_read(const char* file);
 
 /**
- * @brief Cleans up all the allocated data within the TConfig struct pointer
- *        so you don't have to!
- * @param conf
- */
-void tconfig_close(TConfig* conf);
-
-/**
- * @brief Attempts to write the TConfig struct data to the specified 'file'
- *        and returns true on success, or false otherwise.
- *        NOTE: Comments are not currently preserved with this function.
- * @param conf
+ * @brief Writes the specified ini_table_s struct to the specified `file'.
+ *        Returns false if the file could not be opened for writing, otherwise
+ *        true.
+ * @param table
  * @param file
  * @return bool
  */
-bool tconfig_write(TConfig* conf, const char* file);
+bool ini_write(ini_table_s* table, const char* file);
 
 /**
- * @brief Attempts to create the property `key' with the specified `value'.  If
- *        the key already exists in the given section, it will be modified with
- *        the provided value.  If the given section does not exist, it will be
- *        created.  Returns an integer containing the index of `key', or -1 on 
- *        failure.
- * @param conf
+ * @brief Creates a new entry in the `table' containing the `key' and `value'
+ *        provided if it does not exist.  Otherwise, modifies an exsiting `key'
+ *        with the new `value'
+ * @param table
  * @param section_name
  * @param key
  * @param value
- * @return int
  */
-int  tconfig_create_property(TConfig* conf, const char* section_name,
+void ini_entry_create(ini_table_s* table, const char* section_name,
         const char* key, const char* value);
 
 /**
- * @brief Gets a direct pointer to the TConfig property for read-only access.
- *        This is probably the safest option in most cases.
- * @param conf
+ * @brief Checks for the existance of an entry in the specified `table'.  Returns
+ *        false if the entry does not exist, otherwise true.
+ * @param table
+ * @param section_name
+ * @param key
+ * @return bool
+ */
+bool ini_entry_exists(ini_table_s* table, const char* section_name,
+    const char* key);
+
+/**
+ * @brief Retrieves the unmodified value of the specified `key' in `section_name'.
+ *        Returns NULL if the entry does not exist, otherwise a pointer to the 
+ *        entry value data.
+ * @param table
  * @param section_name
  * @param key
  * @return const char*
  */
-const char* tconfig_get_property_raw(TConfig* conf, 
-        const char* section_name,
+const char* ini_entry_get_value(ini_table_s* table, const char* section_name,
         const char* key);
 
 /**
- * @brief Gets the char array data from the TConfig property and removes any 
- *        leading or trailing quotation marks.  This is useful if you don't
- *        feel like formatting the string yourself.  Make sure to call free()
- *        on the newly created array when you're done!
- * @param conf
+ * @brief Retrieves the value of the specified `key' in `section_name', converted
+ *        to int.  Returns false on failure, otherwise true.
+ * @param table
  * @param section_name
  * @param key
- * @return char*
- */
-char* tconfig_get_property_as_char_array(TConfig* conf,
-        const char* section_name,
-        const char* key);
-
-/**
- * @brief Gets the TConfig property converted to an integer.  This is a
- *        convenience function.  Returns an integer, or 0 if conversion failed.
- * @param conf
- * @param section_name
- * @param key
+ * @param [out]value
  * @return int
  */
-int tconfig_get_property_as_int(TConfig* conf,
-        const char* section_name,
-        const char* key);
+bool ini_entry_get_value_as_int(ini_table_s* table, const char* section_name,
+    const char* key, int* value);
+
+/**
+ * @brief Retrieves the value of the specified `key' in `section_name', converted
+ *        to bool.  Returns false on failure, true otherwise.
+ * @param table
+ * @param section_name
+ * @param key
+ * @param [out]value
+ * @return bool
+ */
+bool ini_entry_get_value_as_bool(ini_table_s* table, const char* section_name,
+    const char* key, bool* value);
 
 #endif//_TCONFIG_H_
