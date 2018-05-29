@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "config.h"
+#include "../config.h"
 
 int main()
 {
@@ -9,6 +9,7 @@ int main()
         ini_table_create_entry(config, "Section", "one", "two");
         ini_table_create_entry(config, "Section", "; comment", "");
         ini_table_create_entry(config, "Section", "; comment 2", "");
+        ini_table_create_entry(config, "SectionTwo", "key", "; val comment 2");
         ini_table_write_to_file(config, "test.ini");
     }else {
         printf("Entry one is: %s\n", ini_table_get_entry(config, "Section", "one"));

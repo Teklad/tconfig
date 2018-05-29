@@ -146,11 +146,16 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
                 }
                 break;
             case ';':
-                state = Comment;
-                buf[position++] = c;
-                while(c != EOF && c != '\n') {
-                   c = getc(f);
-                   if (c != EOF && c != '\n') buf[position++] = c;
+                if (state == Value) {
+                    buf[position++] = c;
+                    break;
+                } else {
+                    state = Comment;
+                    buf[position++] = c;
+                    while(c != EOF && c != '\n') {
+                       c = getc(f);
+                       if (c != EOF && c != '\n') buf[position++] = c;
+                    }
                 }
             case '\n':
             case EOF:
