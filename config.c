@@ -121,7 +121,7 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
     FILE* f = fopen(file, "r");
     if (f == NULL) return false;
 
-    enum {Section, Key, Value} state;
+    enum {Section, Key, Value, Comment} state;
     int   c;
     int   position = 0;
     int   spaces   = 0;
@@ -146,9 +146,17 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
                 }
                 break;
             case ';':
-                do {
-                    c = getc(f);
-                }while(c != EOF && c != '\n');
+                if (state == Value) {
+                    buf[position++] = c;
+                    break;
+                } else {
+                    state = Comment;
+                    buf[position++] = c;
+                    while(c != EOF && c != '\n') {
+                       c = getc(f);
+                       if (c != EOF && c != '\n') buf[position++] = c;
+                    }
+                }
             case '\n':
             case EOF:
                 line++;
@@ -157,6 +165,12 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
                         current_section = _ini_section_create(table, "");
                     }
                     _ini_entry_create(current_section, buf, value);
+                }else if(state == Comment) {
+                    if (current_section == NULL) {
+                        current_section = _ini_section_create(table, "");
+                    }
+                    printf("buffer=#%s#\n", buf);
+                    _ini_entry_create(current_section, buf, "");
                 }else if(state == Section) {
                     print_log(line, "Section `%s' missing `]' operator.", buf);
                 }else if(state == Key && position) {
@@ -205,7 +219,11 @@ bool ini_table_write_to_file(ini_table_s* table, const char* file)
         fprintf(f, i > 0 ? "\n[%s]\n" : "[%s]\n", section->name);
         for (int q = 0; q < section->size; q++) {
             ini_entry_s* entry = &section->entry[q];
-            fprintf(f, "%s = %s\n", entry->key, entry->value);
+            if (entry->key[0] == ';') {
+                fprintf(f, "%s\n", entry->key);
+            } else {
+                fprintf(f, "%s = %s\n", entry->key, entry->value);
+            }
         }
     }
     fclose(f);
