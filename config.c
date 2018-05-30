@@ -169,7 +169,6 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
                     if (current_section == NULL) {
                         current_section = _ini_section_create(table, "");
                     }
-                    printf("buffer=#%s#\n", buf);
                     _ini_entry_create(current_section, buf, "");
                 } else if (state == Section) {
                     print_log(line, "Section `%s' missing `]' operator.", buf);
