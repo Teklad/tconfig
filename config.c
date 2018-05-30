@@ -152,7 +152,7 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
                 } else {
                     state = Comment;
                     buf[position++] = c;
-                    while(c != EOF && c != '\n') {
+                    while (c != EOF && c != '\n') {
                        c = getc(f);
                        if (c != EOF && c != '\n') buf[position++] = c;
                     }
@@ -165,15 +165,15 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
                         current_section = _ini_section_create(table, "");
                     }
                     _ini_entry_create(current_section, buf, value);
-                }else if(state == Comment) {
+                } else if (state == Comment) {
                     if (current_section == NULL) {
                         current_section = _ini_section_create(table, "");
                     }
                     printf("buffer=#%s#\n", buf);
                     _ini_entry_create(current_section, buf, "");
-                }else if(state == Section) {
+                } else if (state == Section) {
                     print_log(line, "Section `%s' missing `]' operator.", buf);
-                }else if(state == Key && position) {
+                } else if(state == Key && position) {
                     print_log(line, "Key `%s' missing `=' operator.", buf);
                 }
                 memset(buf, '\0', buffer_size);
