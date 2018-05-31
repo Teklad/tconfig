@@ -28,7 +28,7 @@ You don't need to check for NULL on ini_table_create(), since it creates an empt
 structure.  Always make sure to call ini_table_destroy() when you're finished
 using the data, however.
 
-There's currently no support for saving comment lines, but I may bother to add it in the future if I get bored.
+A recent PR allows reading/writing of comment lines.  Special thanks to @gimli2 for this feature.
 
 For more information on these functions, check out config.h, which I spent a bit of time documenting for easy reading.
 
