@@ -5,22 +5,6 @@
 
 #include "config.h"
 
-typedef struct ini_entry_s {
-    char* key;
-    char* value;
-} ini_entry_s;
-
-typedef struct ini_section_s {
-    char* name;
-    ini_entry_s* entry;
-    int size;
-} ini_section_s;
-
-typedef struct ini_table_s {
-    ini_section_s* section;
-    int size;
-} ini_table_s;
-
 void print_log(int line, const char* msg, const char* extra)
 {
     printf("TConfig [Line: %i]: ", line);
@@ -121,7 +105,7 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
     FILE* f = fopen(file, "r");
     if (f == NULL) return false;
 
-    enum {Section, Key, Value, Comment} state;
+    enum {Section, Key, Value, Comment} state = Section;
     int   c;
     int   position = 0;
     int   spaces   = 0;
@@ -157,7 +141,9 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
                        if (c != EOF && c != '\n') buf[position++] = c;
                     }
                 }
+            // fallthrough
             case '\n':
+            // fallthrough
             case EOF:
                 line++;
                 if (state == Value) {
