@@ -5,14 +5,14 @@
 
 #include "config.h"
 
-void print_log(int line, const char* msg, const char* extra)
+static void print_log(int line, const char* msg, const char* extra)
 {
     printf("TConfig [Line: %i]: ", line);
     printf(msg, extra);
     printf("\n");
 }
 
-ini_entry_s* _ini_entry_create(ini_section_s* section, 
+static ini_entry_s* _ini_entry_create(ini_section_s* section,
         const char* key, const char* value)
 {
     if ((section->size % 10) == 0) {
@@ -27,7 +27,8 @@ ini_entry_s* _ini_entry_create(ini_section_s* section,
     return entry;
 }
 
-ini_section_s* _ini_section_create(ini_table_s* table, const char* section_name)
+static ini_section_s* _ini_section_create(ini_table_s* table,
+    const char* section_name)
 {
     if ((table->size % 10) == 0) {
         table->section = 
@@ -41,7 +42,7 @@ ini_section_s* _ini_section_create(ini_table_s* table, const char* section_name)
     return section;
 }
 
-ini_section_s* _ini_section_find(ini_table_s* table, const char* name)
+static ini_section_s* _ini_section_find(ini_table_s* table, const char* name)
 {
     for (int i = 0; i < table->size; i++) {
         if (strcmp(table->section[i].name, name) == 0) {
@@ -51,7 +52,7 @@ ini_section_s* _ini_section_find(ini_table_s* table, const char* name)
     return NULL;
 }
 
-ini_entry_s* _ini_entry_find(ini_section_s* section, const char* key)
+static ini_entry_s* _ini_entry_find(ini_section_s* section, const char* key)
 {
     for (int i = 0; i < section->size; i++) {
         if (strcmp(section->entry[i].key, key) == 0) {
@@ -61,7 +62,7 @@ ini_entry_s* _ini_entry_find(ini_section_s* section, const char* key)
     return NULL;
 }
 
-ini_entry_s* _ini_entry_get(ini_table_s* table, const char* section_name,
+static ini_entry_s* _ini_entry_get(ini_table_s* table, const char* section_name,
         const char* key)
 {
     ini_section_s* section = _ini_section_find(table, section_name);
