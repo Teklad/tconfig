@@ -121,7 +121,11 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
     while((c = getc(f)) != EOF) {
         if (position > buffer_size-2) {
             buffer_size += 128 * sizeof(char);
+            size_t value_offset = value == NULL ? 0 : value - buf;
             buf = realloc(buf, buffer_size);
+            memset(buf+position, '\0', buffer_size-position);
+            if (value != NULL)
+                value = buf + value_offset;
         }
         switch(c) {
             case ' ':
@@ -152,6 +156,7 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
                         current_section = _ini_section_create(table, "");
                     }
                     _ini_entry_create(current_section, buf, value);
+                    value = NULL;
                 } else if (state == Comment) {
                     if (current_section == NULL) {
                         current_section = _ini_section_create(table, "");
