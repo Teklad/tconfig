@@ -27,7 +27,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
+#include "tconfig.h"
 
 static void print_log(int line, const char* msg, const char* extra)
 {
