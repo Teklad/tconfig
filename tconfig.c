@@ -40,14 +40,14 @@ static ini_entry_s* _ini_entry_create(ini_section_s* section,
         const char* key, const char* value)
 {
     if ((section->size % 10) == 0) {
-        section->entry = 
+        section->entry =
             realloc(section->entry, (10+section->size) * sizeof(ini_entry_s));
     }
     ini_entry_s* entry = &section->entry[section->size++];
     entry->key = malloc((strlen(key)+1)*sizeof(char));
     entry->value = malloc((strlen(value)+1)*sizeof(char));
-    strcpy(entry->key, key);
-    strcpy(entry->value, value);
+    strncpy(entry->key, key, strlen(key)+1);
+    strncpy(entry->value, value, strlen(value)+1);
     return entry;
 }
 
@@ -55,13 +55,13 @@ static ini_section_s* _ini_section_create(ini_table_s* table,
     const char* section_name)
 {
     if ((table->size % 10) == 0) {
-        table->section = 
+        table->section =
             realloc(table->section, (10+table->size) * sizeof(ini_section_s));
     }
     ini_section_s* section = &table->section[table->size++];
     section->size = 0;
     section->name = malloc((strlen(section_name)+1) * sizeof(char));
-    strcpy(section->name, section_name);
+    strncpy(section->name, section_name, strlen(section_name)+1);
     section->entry = malloc(10 * sizeof(ini_entry_s));
     return section;
 }
@@ -69,7 +69,7 @@ static ini_section_s* _ini_section_create(ini_table_s* table,
 static ini_section_s* _ini_section_find(ini_table_s* table, const char* name)
 {
     for (int i = 0; i < table->size; i++) {
-        if (strcmp(table->section[i].name, name) == 0) {
+        if (!strncmp(table->section[i].name, name, INI_MAXLEN)) {
             return &table->section[i];
         }
     }
@@ -79,7 +79,7 @@ static ini_section_s* _ini_section_find(ini_table_s* table, const char* name)
 static ini_entry_s* _ini_entry_find(ini_section_s* section, const char* key)
 {
     for (int i = 0; i < section->size; i++) {
-        if (strcmp(section->entry[i].key, key) == 0) {
+        if (!strncmp(section->entry[i].key, key, INI_MAXLEN)) {
             return &section->entry[i];
         }
     }
@@ -93,7 +93,6 @@ static ini_entry_s* _ini_entry_get(ini_table_s* table, const char* section_name,
     if (section == NULL) {
         return NULL;
     }
-    
     ini_entry_s* entry = _ini_entry_find(section, key);
     if (entry == NULL) {
         return NULL;
@@ -259,7 +258,7 @@ void ini_table_create_entry(ini_table_s* table, const char* section_name,
     }else {
         free(entry->value);
         entry->value = malloc((strlen(value)+1) * sizeof(char));
-        strcpy(entry->value, value);
+        strncpy(entry->value, value, strlen(value)+1);
     }
 }
 
@@ -297,11 +296,10 @@ bool ini_table_get_entry_as_bool(ini_table_s* table, const char* section_name,
     if (val == NULL) {
         return false;
     }
-    if (strcasecmp(val, "on") == 0 || strcasecmp(val, "true") == 0) {
+    if (!strncmp(val, "on", INI_MAXLEN) || !strncmp(val, "true", INI_MAXLEN)) {
         *value = true;
     }else {
         *value = false;
     }
     return true;
 }
-

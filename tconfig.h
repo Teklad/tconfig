@@ -2,6 +2,8 @@
 #define _TCONFIG_H_
 #include <stdbool.h>
 
+#define INI_MAXLEN 255
+
 typedef struct ini_entry_s {
     char* key;
     char* value;
