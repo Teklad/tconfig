@@ -29,13 +29,6 @@ SOFTWARE.
 
 #include "tconfig.h"
 
-static void print_log(int line, const char* msg, const char* extra)
-{
-    printf("TConfig [Line: %i]: ", line);
-    printf(msg, extra);
-    printf("\n");
-}
-
 static ini_entry_s* _ini_entry_create(ini_section_s* section,
         const char* key, const char* value)
 {
@@ -186,9 +179,11 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
                     }
                     _ini_entry_create(current_section, buf, "");
                 } else if (state == Section) {
-                    print_log(line, "Section `%s' missing `]' operator.", buf);
+                    fprintf(stderr, "TConfig [Line %d]: Section `%s'"
+                        " missing `]' operator.", line, buf);
                 } else if(state == Key && position) {
-                    print_log(line, "Key `%s' missing `=' operator.", buf);
+                    fprintf(stderr, "TConfig [Line %d]: Key `%s'"
+                        " missing `=' operator.", line, buf);
                 }
                 memset(buf, '\0', buffer_size);
                 state = Key;
