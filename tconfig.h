@@ -5,12 +5,12 @@
 #define INI_MAXLEN 255
 
 typedef struct ini_entry_s {
-    char* key;
-    char* value;
+    char key[INI_MAXLEN+1];
+    char value[INI_MAXLEN+1];
 } ini_entry_s;
 
 typedef struct ini_section_s {
-    char* name;
+    char name[INI_MAXLEN+1];
     ini_entry_s* entry;
     int size;
 } ini_section_s;

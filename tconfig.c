@@ -37,10 +37,8 @@ static ini_entry_s* _ini_entry_create(ini_section_s* section,
             realloc(section->entry, (10+section->size) * sizeof(ini_entry_s));
     }
     ini_entry_s* entry = &section->entry[section->size++];
-    entry->key = malloc((strlen(key)+1)*sizeof(char));
-    entry->value = malloc((strlen(value)+1)*sizeof(char));
-    strncpy(entry->key, key, strlen(key)+1);
-    strncpy(entry->value, value, strlen(value)+1);
+    strncpy(entry->key, key, INI_MAXLEN);
+    strncpy(entry->value, value, INI_MAXLEN);
     return entry;
 }
 
@@ -53,8 +51,7 @@ static ini_section_s* _ini_section_create(ini_table_s* table,
     }
     ini_section_s* section = &table->section[table->size++];
     section->size = 0;
-    section->name = malloc((strlen(section_name)+1) * sizeof(char));
-    strncpy(section->name, section_name, strlen(section_name)+1);
+    strncpy(section->name, section_name, INI_MAXLEN);
     section->entry = malloc(10 * sizeof(ini_entry_s));
     return section;
 }
@@ -105,13 +102,7 @@ void ini_table_destroy(ini_table_s* table)
 {
     for (int i = 0; i < table->size; i++) {
         ini_section_s* section = &table->section[i];
-        for (int q = 0; q < section->size; q++) {
-            ini_entry_s* entry = &section->entry[q];
-            free(entry->key);
-            free(entry->value);
-        }
         free(section->entry);
-        free(section->name);
     }
     free(table->section);
     free(table);
@@ -251,9 +242,7 @@ void ini_table_create_entry(ini_table_s* table, const char* section_name,
     if (entry == NULL) {
         entry = _ini_entry_create(section, key, value);
     }else {
-        free(entry->value);
-        entry->value = malloc((strlen(value)+1) * sizeof(char));
-        strncpy(entry->value, value, strlen(value)+1);
+        strncpy(entry->value, value, INI_MAXLEN);
     }
 }
 
