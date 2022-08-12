@@ -123,13 +123,13 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
     if (f == NULL) return false;
 
     enum {Section, Key, Value, Comment} state = Section;
-    int   c;
-    int   position = 0;
-    int   spaces   = 0;
-    int   line     = 0;
-    int   buffer_size = 128 * sizeof(char);
-    char* buf   = malloc(buffer_size);
-    char* value = NULL;
+    int      c;
+    unsigned position = 0;
+    int      spaces   = 0;
+    int      line     = 0;
+    size_t   buffer_size = 128 * sizeof(char);
+    char*    buf   = malloc(buffer_size);
+    char*    value = NULL;
 
     ini_section_s* current_section = NULL;
 
