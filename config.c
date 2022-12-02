@@ -77,6 +77,27 @@ static ini_entry_s* _ini_entry_get(ini_table_s* table, const char* section_name,
     return entry;
 }
 
+static void _ini_section_remove_reorder(ini_section_s* section, int remove)
+{
+    free(section->entry[remove].key);
+    free(section->entry[remove].value);
+
+    memmove(&section->entry[remove], &section->entry[remove+1], (section->size - remove) * sizeof(ini_entry_s));
+    section->size -= 1;
+}
+
+static bool _ini_section_remove_entry(ini_section_s* section, ini_entry_s* entry)
+{
+    for (int i = 0; i < section->size; i++) {
+        if (entry == &section->entry[i]) {
+            _ini_section_remove_reorder(section, i);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 ini_table_s* ini_table_create()
 {
     ini_table_s* table = malloc(sizeof(ini_table_s));
@@ -281,3 +302,19 @@ bool ini_table_get_entry_as_bool(ini_table_s* table, const char* section_name,
     return true;
 }
 
+bool ini_table_remove_entry(ini_table_s* table, const char* section_name,
+        const char* key)
+{   
+    
+    ini_section_s* section = _ini_section_find(table, section_name);
+    if (section == NULL) {
+        return false;
+    }
+
+    ini_entry_s* entry = _ini_entry_find(section, key);
+    if (entry == NULL) {
+        return false;
+    }
+
+    return _ini_section_remove_entry(section, entry);
+}

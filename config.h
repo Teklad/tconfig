@@ -62,6 +62,17 @@ void ini_table_create_entry(ini_table_s* table, const char* section_name,
         const char* key, const char* value);
 
 /**
+ * @brief Removes an entry in the `table' containing the `key' and `value'
+ *        provided it exists.
+ *        Returns true if the entry was removed, otherwise false.
+ * @param table
+ * @param section_name
+ * @param key
+ */
+bool ini_table_remove_entry(ini_table_s* table, const char* section_name,
+        const char* key);
+
+/**
  * @brief Checks for the existance of an entry in the specified `table'.  Returns
  *        false if the entry does not exist, otherwise true.
  * @param table
