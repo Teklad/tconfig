@@ -119,4 +119,13 @@ bool ini_table_get_entry_as_int(ini_table_s* table, const char* section_name,
 bool ini_table_get_entry_as_bool(ini_table_s* table, const char* section_name,
     const char* key, bool* value);
 
+    
+int ini_table_get_section_count(ini_table_s* table);
+
+char* ini_table_get_section_name(ini_table_s* table, int section);
+
+int ini_table_get_entry_count(ini_table_s* table, const char* section_name);
+
+char* ini_table_get_entry_from_index(ini_table_s* table, const char* section_name, int entry);
+
 #endif//_TCONFIG_H_
