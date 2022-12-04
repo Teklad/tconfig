@@ -77,6 +77,27 @@ static ini_entry_s* _ini_entry_get(ini_table_s* table, const char* section_name,
     return entry;
 }
 
+static void _ini_section_remove_reorder(ini_section_s* section, int remove)
+{
+    free(section->entry[remove].key);
+    free(section->entry[remove].value);
+
+    memmove(&section->entry[remove], &section->entry[remove+1], (section->size - remove) * sizeof(ini_entry_s));
+    section->size -= 1;
+}
+
+static bool _ini_section_remove_entry(ini_section_s* section, ini_entry_s* entry)
+{
+    for (int i = 0; i < section->size; i++) {
+        if (entry == &section->entry[i]) {
+            _ini_section_remove_reorder(section, i);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 ini_table_s* ini_table_create()
 {
     ini_table_s* table = malloc(sizeof(ini_table_s));
@@ -111,7 +132,7 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
     int   position = 0;
     int   spaces   = 0;
     int   line     = 0;
-    int   buffer_size = 128 * sizeof(char);
+    int   buffer_size = 1024 * sizeof(char);
     char* buf   = malloc(buffer_size);
     char* value = NULL;
 
@@ -133,6 +154,15 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
                     case Value: if (value[0] != '\0') spaces++; break;
                     default: if (buf[0] != '\0') spaces++; break;
                 }
+                break;
+            case '#':
+                if (state == Value) {
+                    buf[position++] = c;
+                    break;
+                }
+                
+                line++;
+                state=Key;
                 break;
             case ';':
                 if (state == Value) {
@@ -281,3 +311,51 @@ bool ini_table_get_entry_as_bool(ini_table_s* table, const char* section_name,
     return true;
 }
 
+bool ini_table_remove_entry(ini_table_s* table, const char* section_name,
+        const char* key)
+{   
+    
+    ini_section_s* section = _ini_section_find(table, section_name);
+    if (section == NULL) {
+        return false;
+    }
+
+    ini_entry_s* entry = _ini_entry_find(section, key);
+    if (entry == NULL) {
+        return false;
+    }
+
+    return _ini_section_remove_entry(section, entry);
+}
+
+int ini_table_get_section_count(ini_table_s* table)
+{
+    return table->size;
+}
+
+char* ini_table_get_section_name(ini_table_s* table, int section)
+{
+    return table->section[section].name;
+}
+
+int ini_table_get_entry_count(ini_table_s* table, const char* section_name)
+{
+    ini_section_s* section = _ini_section_find(table, section_name);
+
+    if (section == NULL){
+        return -1;
+    }
+
+    return section->size;
+}
+
+char* ini_table_get_entry_from_index(ini_table_s* table, const char* section_name, int entry)
+{   
+    ini_section_s* section = _ini_section_find(table, section_name);
+
+    if (section == NULL){
+        return NULL;
+    }
+
+    return section->entry[entry].key;
+}
