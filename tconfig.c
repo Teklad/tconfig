@@ -52,7 +52,7 @@ static ini_section_s* _ini_section_create(ini_table_s* table,
     ini_section_s* section = &table->section[table->size++];
     section->size = 0;
     strncpy(section->name, section_name, INI_MAXLEN);
-    section->entry = malloc(10 * sizeof(ini_entry_s));
+    section->entry = calloc(1, 10 * sizeof(ini_entry_s));
     return section;
 }
 
@@ -92,9 +92,9 @@ static ini_entry_s* _ini_entry_get(ini_table_s* table, const char* section_name,
 
 ini_table_s* ini_table_create(void)
 {
-    ini_table_s* table = malloc(sizeof(ini_table_s));
+    ini_table_s* table = calloc(1, sizeof(ini_table_s));
     table->size = 0;
-    table->section = malloc(10 * sizeof(ini_section_s));
+    table->section = calloc(1, 10 * sizeof(ini_section_s));
     return table;
 }
 
@@ -119,17 +119,24 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
     int      spaces   = 0;
     int      line     = 0;
     size_t   buffer_size = 128 * sizeof(char);
-    char*    buf   = malloc(buffer_size);
+    char*    buf   = calloc(1, buffer_size);
     char*    value = NULL;
 
     ini_section_s* current_section = NULL;
 
-    memset(buf, '\0', buffer_size);
     while((c = getc(f)) != EOF) {
         if (position > buffer_size-2) {
             buffer_size += 128 * sizeof(char);
             size_t value_offset = value == NULL ? 0 : value - buf;
-            buf = realloc(buf, buffer_size);
+            char *res = realloc(buf, buffer_size);
+            if (!res) {
+                free(buf);
+                fprintf(stderr, "TConfig failed to reallocate buffer\n");
+                break;
+            }
+            else {
+                buf = res;
+            }
             memset(buf+position, '\0', buffer_size-position);
             if (value != NULL)
                 value = buf + value_offset;
