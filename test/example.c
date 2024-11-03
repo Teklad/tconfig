@@ -1,7 +1,7 @@
 #include <stdio.h>
-#include "../config.h"
+#include "../tconfig.h"
 
-int main()
+int main(int argc, char *argv[])
 {
     ini_table_s* config = ini_table_create();
     if (!ini_table_read_from_file(config, "test.ini")) {

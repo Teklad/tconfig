@@ -2,13 +2,15 @@
 #define _TCONFIG_H_
 #include <stdbool.h>
 
+#define INI_MAXLEN 255
+
 typedef struct ini_entry_s {
-    char* key;
-    char* value;
+    char key[INI_MAXLEN+1];
+    char value[INI_MAXLEN+1];
 } ini_entry_s;
 
 typedef struct ini_section_s {
-    char* name;
+    char name[INI_MAXLEN+1];
     ini_entry_s* entry;
     int size;
 } ini_section_s;
@@ -22,7 +24,7 @@ typedef struct ini_table_s {
  * @brief Creates an empty ini_table_s struct for writing new entries to.
  * @return ini_table_s*
  */
-ini_table_s* ini_table_create();
+ini_table_s* ini_table_create(void);
 
 /**
  * @brief Free up all the allocated resources in the ini_table_s struct.

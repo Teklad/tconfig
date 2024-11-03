@@ -1,29 +1,44 @@
+/*
+MIT License
+
+Copyright (c) 2019 Justin Kinnaird
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
-
-static void print_log(int line, const char* msg, const char* extra)
-{
-    printf("TConfig [Line: %i]: ", line);
-    printf(msg, extra);
-    printf("\n");
-}
+#include "tconfig.h"
 
 static ini_entry_s* _ini_entry_create(ini_section_s* section,
         const char* key, const char* value)
 {
     if ((section->size % 10) == 0) {
-        section->entry = 
+        section->entry =
             realloc(section->entry, (10+section->size) * sizeof(ini_entry_s));
     }
     ini_entry_s* entry = &section->entry[section->size++];
-    entry->key = malloc((strlen(key)+1)*sizeof(char));
-    entry->value = malloc((strlen(value)+1)*sizeof(char));
-    strcpy(entry->key, key);
-    strcpy(entry->value, value);
+    strncpy(entry->key, key, INI_MAXLEN);
+    strncpy(entry->value, value, INI_MAXLEN);
     return entry;
 }
 
@@ -31,13 +46,12 @@ static ini_section_s* _ini_section_create(ini_table_s* table,
     const char* section_name)
 {
     if ((table->size % 10) == 0) {
-        table->section = 
+        table->section =
             realloc(table->section, (10+table->size) * sizeof(ini_section_s));
     }
     ini_section_s* section = &table->section[table->size++];
     section->size = 0;
-    section->name = malloc((strlen(section_name)+1) * sizeof(char));
-    strcpy(section->name, section_name);
+    strncpy(section->name, section_name, INI_MAXLEN);
     section->entry = malloc(10 * sizeof(ini_entry_s));
     return section;
 }
@@ -45,7 +59,7 @@ static ini_section_s* _ini_section_create(ini_table_s* table,
 static ini_section_s* _ini_section_find(ini_table_s* table, const char* name)
 {
     for (int i = 0; i < table->size; i++) {
-        if (strcmp(table->section[i].name, name) == 0) {
+        if (!strncmp(table->section[i].name, name, INI_MAXLEN)) {
             return &table->section[i];
         }
     }
@@ -55,7 +69,7 @@ static ini_section_s* _ini_section_find(ini_table_s* table, const char* name)
 static ini_entry_s* _ini_entry_find(ini_section_s* section, const char* key)
 {
     for (int i = 0; i < section->size; i++) {
-        if (strcmp(section->entry[i].key, key) == 0) {
+        if (!strncmp(section->entry[i].key, key, INI_MAXLEN)) {
             return &section->entry[i];
         }
     }
@@ -69,7 +83,6 @@ static ini_entry_s* _ini_entry_get(ini_table_s* table, const char* section_name,
     if (section == NULL) {
         return NULL;
     }
-    
     ini_entry_s* entry = _ini_entry_find(section, key);
     if (entry == NULL) {
         return NULL;
@@ -77,7 +90,7 @@ static ini_entry_s* _ini_entry_get(ini_table_s* table, const char* section_name,
     return entry;
 }
 
-ini_table_s* ini_table_create()
+ini_table_s* ini_table_create(void)
 {
     ini_table_s* table = malloc(sizeof(ini_table_s));
     table->size = 0;
@@ -89,13 +102,7 @@ void ini_table_destroy(ini_table_s* table)
 {
     for (int i = 0; i < table->size; i++) {
         ini_section_s* section = &table->section[i];
-        for (int q = 0; q < section->size; q++) {
-            ini_entry_s* entry = &section->entry[q];
-            free(entry->key);
-            free(entry->value);
-        }
         free(section->entry);
-        free(section->name);
     }
     free(table->section);
     free(table);
@@ -107,13 +114,13 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
     if (f == NULL) return false;
 
     enum {Section, Key, Value, Comment} state = Section;
-    int   c;
-    int   position = 0;
-    int   spaces   = 0;
-    int   line     = 0;
-    int   buffer_size = 128 * sizeof(char);
-    char* buf   = malloc(buffer_size);
-    char* value = NULL;
+    int      c;
+    unsigned position = 0;
+    int      spaces   = 0;
+    int      line     = 0;
+    size_t   buffer_size = 128 * sizeof(char);
+    char*    buf   = malloc(buffer_size);
+    char*    value = NULL;
 
     ini_section_s* current_section = NULL;
 
@@ -163,9 +170,11 @@ bool ini_table_read_from_file(ini_table_s* table, const char* file)
                     }
                     _ini_entry_create(current_section, buf, "");
                 } else if (state == Section) {
-                    print_log(line, "Section `%s' missing `]' operator.", buf);
+                    fprintf(stderr, "TConfig [Line %d]: Section `%s'"
+                        " missing `]' operator.", line, buf);
                 } else if(state == Key && position) {
-                    print_log(line, "Key `%s' missing `=' operator.", buf);
+                    fprintf(stderr, "TConfig [Line %d]: Key `%s'"
+                        " missing `=' operator.", line, buf);
                 }
                 memset(buf, '\0', buffer_size);
                 state = Key;
@@ -233,9 +242,7 @@ void ini_table_create_entry(ini_table_s* table, const char* section_name,
     if (entry == NULL) {
         entry = _ini_entry_create(section, key, value);
     }else {
-        free(entry->value);
-        entry->value = malloc((strlen(value)+1) * sizeof(char));
-        strcpy(entry->value, value);
+        strncpy(entry->value, value, INI_MAXLEN);
     }
 }
 
@@ -273,11 +280,10 @@ bool ini_table_get_entry_as_bool(ini_table_s* table, const char* section_name,
     if (val == NULL) {
         return false;
     }
-    if (strcasecmp(val, "on") == 0 || strcasecmp(val, "true") == 0) {
+    if (!strncmp(val, "on", INI_MAXLEN) || !strncmp(val, "true", INI_MAXLEN)) {
         *value = true;
     }else {
         *value = false;
     }
     return true;
 }
-
