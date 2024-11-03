@@ -8,7 +8,6 @@ the ';' character.
 
 A basic usage example would be something like this:
 ```c
-{
 int main()
 {
     ini_table_s* config = ini_table_create();
